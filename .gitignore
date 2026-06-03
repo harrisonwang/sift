@@ -1,0 +1,24 @@
+# Build output
+/bin/
+/dist/
+
+# Runtime data
+/cache/
+/reports/
+*.db
+*.db-wal
+*.db-shm
+
+# Local config (keep config.example.yaml tracked)
+/config.yaml
+
+# Scratch
+/tmp_run/
+# Python prototype kept locally for reference; superseded by the Go impl.
+/tmp/
+
+# Editor / tooling local state
+.claude/settings.local.json
+
+# OS / editor
+.DS_Store

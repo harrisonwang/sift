@@ -1,0 +1,53 @@
+# sift configuration example.
+# Copy to $HOME/.sift/config.yaml and edit. Run `sift config validate` to check it.
+
+# cache.db_path is optional. If omitted, sift stores SQLite data at
+# $HOME/.sift/sift.db by default.
+cache: {}
+
+providers:
+  # Twitter/X via Nitter RSS, with multi-instance fallback.
+  - name: twitter
+    enabled: true
+    config:
+      accounts: [msdev, OpenAI]
+      # Optional; sane public defaults are used if omitted.
+      nitter_instances:
+        - https://nitter.net
+        - https://nitter.privacydev.net
+        - https://nitter.poast.org
+      max_items: 20
+      # A Nitter account feed includes retweets and replies, not just original
+      # posts. Defaults: drop retweets (other accounts' content), keep the
+      # account's own replies.
+      include_retweets: false
+      include_replies: false
+
+  # Hacker News via the official Firebase API.
+  - name: hackernews
+    enabled: true
+    config:
+      feeds: [top, show] # any of: top, new, show, ask, best
+      max_items: 50
+
+  # Reddit subreddits via RSS.
+  - name: reddit
+    enabled: true
+    config:
+      subreddits: [programming, MachineLearning]
+      sort: hot # hot | new | top | rising | best
+      limit: 30
+
+  # Generic RSS/Atom blogs and feeds.
+  - name: rssblog
+    enabled: true
+    config:
+      feeds:
+        - url: https://openai.com/news/rss.xml
+          source: openai_news
+        - url: https://blog.google/products/gemini/rss/
+          source: gemini_blog
+        - url: https://deepmind.google/blog/rss.xml
+          source: deepmind_blog
+        # Note: Anthropic has no official RSS feed.
+      max_items: 30

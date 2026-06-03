@@ -1,0 +1,52 @@
+# goreleaser config — pure-Go static cross-platform builds.
+# Validate locally with: goreleaser check
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: sift
+    main: ./cmd/sift
+    binary: sift
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}}
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: sift
+    name_template: >-
+      {{ .ProjectName }}_{{ .Tag }}_
+      {{- if eq .Os "darwin" -}}
+        {{- if eq .Arch "arm64" -}}aarch64-apple-darwin{{- else -}}x86_64-apple-darwin{{- end -}}
+      {{- else if eq .Os "linux" -}}
+        {{- if eq .Arch "arm64" -}}aarch64-unknown-linux-gnu{{- else -}}x86_64-unknown-linux-gnu{{- end -}}
+      {{- else if eq .Os "windows" -}}
+        {{- if eq .Arch "arm64" -}}aarch64-pc-windows-msvc{{- else -}}x86_64-pc-windows-msvc{{- end -}}
+      {{- end -}}
+    wrap_in_directory: sift
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+      - LICENSE
+      - config.example.yaml
+
+checksum:
+  name_template: "SHA256SUMS.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
