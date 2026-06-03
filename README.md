@@ -66,14 +66,17 @@ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o sift.exe    ./cmd/sift
 ## 快速开始
 
 ```bash
-mkdir -p "$HOME/.sift"
-cp config.example.yaml "$HOME/.sift/config.yaml"  # 然后按需编辑
-sift config validate                               # 校验配置与各 provider 设置
-sift discover                                      # 抓取新条目入缓存；打印 JSON 摘要
-sift query --date today                            # 今天的条目，JSON 输出到 stdout
-sift report --date today                           # 今天的简报（Markdown）输出到 stdout
-sift report --date today -o digest.md              # ……或写入文件
+sift config init                                  # 创建 $HOME/.sift/config.yaml（已存在则不覆盖）
+# 编辑 $HOME/.sift/config.yaml，按需调整 provider
+sift config validate                              # 校验配置与各 provider 设置
+sift discover                                     # 抓取新条目入缓存；打印 JSON 摘要
+sift query --date today                           # 今天的条目，JSON 输出到 stdout
+sift report --date today                          # 今天的简报（Markdown）输出到 stdout
+sift report --date today -o digest.md             # ……或写入文件
 ```
+
+如需覆盖重建配置文件，可运行 `sift config init --force`。源码目录中的
+`config.example.yaml` 与 `sift config init` 写入的 starter config 保持一致。
 
 ## 命令
 
@@ -83,6 +86,7 @@ sift report --date today -o digest.md              # ……或写入文件
 | `sift query` | 查询缓存并输出到 stdout（默认 JSON）。 |
 | `sift report` | 从缓存生成报告（默认 Markdown 到 stdout；`-o` 写入文件）。 |
 | `sift prune` | 按过滤条件删除缓存条目（改了 provider 过滤后用它清理旧数据）。 |
+| `sift config init` | 创建默认配置文件 `$HOME/.sift/config.yaml`；已存在则不覆盖，可加 `--force` 覆盖。 |
 | `sift config validate` | 校验配置，含各 provider 的设置。 |
 | `sift config show` | 打印当前生效的配置。 |
 | `sift source list` | 列出可用的 provider 类型。 |

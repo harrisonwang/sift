@@ -154,3 +154,29 @@ func (c *Config) EnsureDirs() error {
 	}
 	return nil
 }
+
+// InitDefaultConfig creates sift's default config directory and starter config.
+// Existing config files are preserved unless force is true.
+func InitDefaultConfig(path string, force bool) (string, bool, error) {
+	if path == "" {
+		defaultPath, err := DefaultConfigPath()
+		if err != nil {
+			return "", false, err
+		}
+		path = defaultPath
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return path, false, fmt.Errorf("create config dir: %w", err)
+	}
+	if !force {
+		if _, err := os.Stat(path); err == nil {
+			return path, false, nil
+		} else if !os.IsNotExist(err) {
+			return path, false, fmt.Errorf("stat config %s: %w", path, err)
+		}
+	}
+	if err := os.WriteFile(path, []byte(DefaultConfigExample), 0o644); err != nil {
+		return path, false, fmt.Errorf("write config %s: %w", path, err)
+	}
+	return path, true, nil
+}

@@ -11,6 +11,10 @@
     }
   },
   "bin": "sift.exe",
+  "post_install": [
+    "Write-Host '创建默认配置：sift config init'",
+    "Write-Host '然后编辑 ~/.sift/config.yaml，并运行：sift config validate'"
+  ],
   "checkver": {
     "github": "https://github.com/{{REPO}}"
   },

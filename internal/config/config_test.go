@@ -128,3 +128,52 @@ providers:
 		t.Fatalf("expected nil feeds, got %+v", s.Feeds)
 	}
 }
+
+func TestInitDefaultConfig(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	path, created, err := InitDefaultConfig("", false)
+	if err != nil {
+		t.Fatalf("InitDefaultConfig: %v", err)
+	}
+	wantPath := filepath.Join(home, AppDirName, DefaultConfigName)
+	if path != wantPath {
+		t.Fatalf("path: got %q, want %q", path, wantPath)
+	}
+	if !created {
+		t.Fatal("expected created=true")
+	}
+	if _, err := Load(path); err != nil {
+		t.Fatalf("generated config should load: %v", err)
+	}
+
+	if err := os.WriteFile(path, []byte("custom"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, created, err = InitDefaultConfig("", false)
+	if err != nil {
+		t.Fatalf("second InitDefaultConfig: %v", err)
+	}
+	if created {
+		t.Fatal("expected existing config to be preserved")
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(raw) != "custom" {
+		t.Fatalf("existing config overwritten without force: %q", raw)
+	}
+
+	_, created, err = InitDefaultConfig("", true)
+	if err != nil {
+		t.Fatalf("force InitDefaultConfig: %v", err)
+	}
+	if !created {
+		t.Fatal("expected force to rewrite config")
+	}
+	if _, err := Load(path); err != nil {
+		t.Fatalf("forced generated config should load: %v", err)
+	}
+}

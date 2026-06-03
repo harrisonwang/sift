@@ -16,7 +16,29 @@ func newConfigCmd() *cobra.Command {
 		Use:   "config",
 		Short: "查看与校验配置",
 	}
-	cmd.AddCommand(newConfigValidateCmd(), newConfigShowCmd())
+	cmd.AddCommand(newConfigInitCmd(), newConfigValidateCmd(), newConfigShowCmd())
+	return cmd
+}
+
+func newConfigInitCmd() *cobra.Command {
+	var force bool
+	cmd := &cobra.Command{
+		Use:   "init",
+		Short: "创建默认配置文件（默认 ~/.sift/config.yaml）",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			path, created, err := config.InitDefaultConfig(flagConfig, force)
+			if err != nil {
+				return err
+			}
+			if created {
+				fmt.Fprintf(os.Stdout, "已创建配置文件：%s\n请按需编辑后运行：sift config validate\n", path)
+				return nil
+			}
+			fmt.Fprintf(os.Stdout, "配置文件已存在，未覆盖：%s\n如需覆盖，请运行：sift config init --force\n", path)
+			return nil
+		},
+	}
+	cmd.Flags().BoolVar(&force, "force", false, "覆盖已存在的配置文件")
 	return cmd
 }
 

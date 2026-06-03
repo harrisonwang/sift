@@ -25,10 +25,14 @@ func newRootCmd() *cobra.Command {
 		Short: "sift — provider 驱动的技术资讯雷达",
 		Long: "sift 从配置的数据源（Twitter/Nitter、Hacker News、Reddit、RSS 博客）抓取条目，\n" +
 			"用 SQLite 缓存去重，并生成 Markdown/JSON 报告。\n\n" +
+			"首次使用请先运行 `sift config init` 创建默认配置文件，\n" +
+			"然后编辑 ~/.sift/config.yaml 并运行 `sift config validate` 校验。\n\n" +
 			"所有命令的结果输出到 stdout，日志输出到 stderr。",
-		Example: "  sift discover                         # 抓取新条目并写入缓存\n" +
-			"  sift query --date today               # 查询今天的条目（JSON）\n" +
-			"  sift report --date today -o today.md  # 生成 Markdown 报告文件",
+		Example: "  sift config init                     # 首次使用：创建 ~/.sift/config.yaml\n" +
+			"  sift config validate                 # 校验配置与各 provider 设置\n" +
+			"  sift discover                        # 抓取新条目并写入缓存\n" +
+			"  sift query --date today              # 查询今天的条目（JSON）\n" +
+			"  sift report --date today -o today.md # 生成 Markdown 报告文件",
 		Version:       versionString(),
 		SilenceUsage:  true,
 		SilenceErrors: true,

@@ -23,6 +23,20 @@ class {{CLASS_NAME}} < Formula
 
   def install
     bin.install "{{TOOL}}"
+    pkgshare.install "config.example.yaml"
+  end
+
+  def caveats
+    <<~EOS
+      创建默认配置：
+        {{TOOL}} config init
+
+      然后编辑 ~/.sift/config.yaml，并校验配置：
+        {{TOOL}} config validate
+
+      随包安装的配置示例也可在这里查看：
+        #{pkgshare}/config.example.yaml
+    EOS
   end
 
   test do

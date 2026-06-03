@@ -1,5 +1,8 @@
-# sift 配置示例。
-# 编辑此文件后，运行 `sift config validate` 校验配置。
+package config
+
+// DefaultConfigExample is the starter configuration written by `sift config init`.
+const DefaultConfigExample = `# sift 配置示例。
+# 编辑此文件后，运行 ` + "`" + `sift config validate` + "`" + ` 校验配置。
 
 # cache.db_path 可省略；省略时，sift 默认把 SQLite 缓存保存在
 # $HOME/.sift/sift.db。
@@ -50,3 +53,4 @@ providers:
           source: deepmind_blog
         # 注：Anthropic 暂无官方 RSS feed。
       max_items: 30
+`
