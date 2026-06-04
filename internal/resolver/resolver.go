@@ -142,27 +142,30 @@ func (r *Resolver) Resolve(ctx context.Context, input string) Result {
 		return res
 	}
 
-	// 4. feed-shaped URL → it is the feed itself
-	if isFeedURL(u) {
+	// 4. feed-shaped URL, or a "feeds.*" host (megaphone/feedburner/simplecast…)
+	//    → treat the URL itself as the feed.
+	if isFeedURL(u) || strings.HasPrefix(host, "feeds.") {
 		return rssResult(input, u.String(), slugFromHost(host))
 	}
 
 	// 5. generic website → RSS/Atom auto-discovery
-	feeds, derr := r.discoverFeeds(ctx, u.String())
-	if derr != nil {
-		res.Error = fmt.Sprintf("抓取网站失败:%v", derr)
-		return res
+	if feeds, derr := r.discoverFeeds(ctx, u.String()); derr == nil && len(feeds) > 0 {
+		out := rssResult(input, feeds[0], slugFromHost(host))
+		if len(feeds) > 1 {
+			out.Ambiguous = true
+			out.Candidates = feeds
+		}
+		return out
 	}
-	if len(feeds) == 0 {
-		res.Error = "未发现 RSS/Atom feed;请直接提供 feed 地址"
-		return res
+
+	// 6. last resort: the URL may itself be a feed with a non-standard path
+	//    (no .xml suffix, no /feed). Try parsing it as a feed.
+	if _, err := r.feed.Parse(ctx, u.String()); err == nil {
+		return rssResult(input, u.String(), slugFromHost(host))
 	}
-	out := rssResult(input, feeds[0], slugFromHost(host))
-	if len(feeds) > 1 {
-		out.Ambiguous = true
-		out.Candidates = feeds
-	}
-	return out
+
+	res.Error = "未发现 RSS/Atom feed;请直接提供 feed 地址"
+	return res
 }
 
 // Verify fetches the resolved source once and records a sample count / latest
@@ -337,7 +340,9 @@ func isFeedURL(u *url.URL) bool {
 // slugFromHost turns a host into a config-friendly source label, e.g.
 // "simonwillison.net" -> "simonwillison", "news.ycombinator.com" -> "news_ycombinator".
 func slugFromHost(host string) string {
-	host = strings.TrimPrefix(strings.ToLower(host), "www.")
+	host = strings.ToLower(host)
+	host = strings.TrimPrefix(host, "www.")
+	host = strings.TrimPrefix(host, "feeds.")
 	host = strings.TrimSuffix(host, ".")
 	// drop the last label (TLD) when there are at least two labels
 	labels := strings.Split(host, ".")
