@@ -25,7 +25,10 @@ func main() {
 	defer stop()
 
 	if err := newRootCmd().ExecuteContext(ctx); err != nil {
-		fmt.Fprintln(os.Stderr, "sift: "+err.Error())
+		// errSilent means "exit non-zero, detail already in the structured output".
+		if _, silent := err.(*silentErr); !silent {
+			fmt.Fprintln(os.Stderr, "sift: "+err.Error())
+		}
 		os.Exit(1)
 	}
 }

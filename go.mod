@@ -3,6 +3,7 @@ module github.com/harrisonwang/sift
 go 1.25.0
 
 require (
+	github.com/PuerkitoBio/goquery v1.8.0
 	github.com/mmcdole/gofeed v1.3.0
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/sync v0.20.0
@@ -11,7 +12,6 @@ require (
 )
 
 require (
-	github.com/PuerkitoBio/goquery v1.8.0 // indirect
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect

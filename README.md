@@ -67,7 +67,8 @@ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o sift.exe    ./cmd/sift
 
 ```bash
 sift config init                                  # 创建 $HOME/.sift/config.yaml（已存在则不覆盖）
-# 编辑 $HOME/.sift/config.yaml，按需调整 provider
+sift add @karpathy https://simonwillison.net/ --write   # 一键加源：识别+验证+写配置（推荐）
+# 或手动编辑 $HOME/.sift/config.yaml 调整 provider
 sift config validate                              # 校验配置与各 provider 设置
 sift discover                                     # 抓取新条目入缓存；打印 JSON 摘要
 sift query --date today                           # 今天的条目，JSON 输出到 stdout
@@ -82,6 +83,7 @@ sift report --date today -o digest.md             # ……或写入文件
 
 | 命令 | 用途 |
 |---|---|
+| `sift add <input>` | 识别信息源并加入雷达（`@handle` / `r/sub` / 网站 / GitHub repo）；默认 dry-run，`--write` 写配置。 |
 | `sift discover` | 抓取所有启用 provider 的新条目入缓存；向 stdout 打印 JSON 摘要。 |
 | `sift query` | 查询缓存并输出到 stdout（默认 JSON）。 |
 | `sift report` | 从缓存生成报告（默认 Markdown 到 stdout；`-o` 写入文件）。 |
@@ -109,6 +111,26 @@ sift report --format json -o report.json
 - `--keyword` 对标题 + 摘要做大小写不敏感的子串匹配。
 - `discover`/`query`/`report` 都写 **stdout**，日志走 **stderr**，所以管道很干净：
   `sift query --date today | jq '.items[].url'`。加 `--quiet` 可彻底静默日志。
+
+## 添加信息源（`sift add`）
+
+不用手写 provider schema——直接把你知道的东西丢给 `sift add`，它会
+**识别类型 → 抓一次验证 → 写入配置**：
+
+```bash
+sift add @karpathy                     # Twitter/X 账号
+sift add r/LocalLLaMA                   # Reddit 子版块
+sift add https://simonwillison.net/    # 普通网站（自动发现 RSS/Atom）
+sift add github.com/cli/cli            # GitHub release feed
+sift add hn                            # Hacker News
+sift add @karpathy r/golang --write    # 批量；--write 才写入配置
+```
+
+- 默认 **dry-run**：只识别 + 验证，输出 JSON（给 Agent）或加 `-f text`（给人），不改配置。
+- `--write` 才合并进 `$HOME/.sift/config.yaml`：幂等去重，保留已有注释。
+- **非交互**：一个网站发现多个 feed 时，默认选第一个，其余放进 `candidates`；识别 / 验证
+  失败以非零退出码返回。
+- `--no-verify` 跳过抓取验证（离线 / CI）。
 
 ## 配置
 

@@ -16,8 +16,8 @@
 ```
 ┌──────────────────────────────────────────┐
 │                 CLI 层                    │
-│    discover · query · report · config    │
-│            (cobra 命令树)                 │
+│  add · discover · query · report · prune  │
+│       config · source (cobra 命令树)      │
 ├──────────────────────────────────────────┤
 │             orchestration 层              │
 │     调度 · 去重 · 报告生成 · 配置管理     │
@@ -43,44 +43,37 @@
 ```
 sift/
 ├── cmd/
-│   └── sift/
-│       └── main.go                  # 唯一入口，注册 cobra 命令
+│   └── sift/                          # cobra 命令树
+│       ├── main.go  root.go           # 入口 + 根命令/全局参数（含版本、--quiet）
+│       ├── add.go                     # sift add（信息源解析器入口）
+│       ├── discover.go  query.go  report.go  prune.go
+│       └── configcmd.go  source.go  filter.go
 ├── internal/
-│   ├── model/
-│   │   └── item.go                  # Item 结构体
+│   ├── model/item.go                  # Item 结构体
 │   ├── config/
-│   │   └── config.go                # YAML 配置解析
+│   │   ├── config.go                  # YAML 解析（默认 ~/.sift）
+│   │   ├── source.go                  # AddSource：yaml.Node 合并写配置
+│   │   └── default_config.go          # config init 的内嵌 starter
+│   ├── resolver/resolver.go           # 识别 + RSS 自动发现 + 验证（sift add 引擎）
+│   ├── feedx/feedx.go                 # 共享 RSS 抓取/解析工具
 │   ├── provider/
-│   │   ├── provider.go              # Provider 接口定义
-│   │   ├── registry.go              # 工厂方法，根据配置激活
-│   │   ├── twitter/
-│   │   │   └── twitter.go
-│   │   ├── hackernews/
-│   │   │   └── hackernews.go
-│   │   ├── reddit/
-│   │   │   └── reddit.go
-│   │   └── rssblog/
-│   │       └── rssblog.go           # 通用 RSS 博客 Provider
+│   │   ├── provider.go  registry.go   # 接口 + 自注册式工厂
+│   │   ├── all/all.go                 # blank import 触发注册
+│   │   └── twitter/  hackernews/  reddit/  rssblog/
 │   ├── cache/
-│   │   ├── cache.go                 # Cache 接口
-│   │   └── sqlite.go                # SQLite 实现
+│   │   ├── cache.go                   # Cache 接口
+│   │   └── sqlite.go                  # SQLite 实现（modernc，无 CGO）
 │   ├── reporter/
-│   │   ├── reporter.go              # Reporter 接口
-│   │   ├── markdown.go
-│   │   └── json.go
-│   └── orchestrator/
-│       └── orchestrator.go          # 核心调度：遍历 Provider → 去重 → 生成结果
+│   │   └── reporter.go  markdown.go  json.go
+│   └── orchestrator/orchestrator.go   # 并发抓取 → 去重 → 查询/报告
 ├── config.example.yaml
-├── go.mod
-├── go.sum
-├── .goreleaser.yaml
-├── .github/
-│   └── workflows/
-│       └── release.yml
+├── Makefile  go.mod  go.sum  .goreleaser.yaml  .gitignore
+├── .github/workflows/                 # ci.yml + release.yml
 └── README.md
 ```
 
-MCP/SKILL 若未来需要，可以另起 `internal/server/` 作为独立包，不影响核心。
+MCP 若未来需要（仅当目标 Agent 跑不了 shell），可另起 `internal/server/` 作为独立包，
+不影响核心；详见 `agent-integration.md`。
 
 ---
 
@@ -88,47 +81,50 @@ MCP/SKILL 若未来需要，可以另起 `internal/server/` 作为独立包，�
 
 ```bash
 # 核心命令
-sift discover --config config.yaml
-sift query --date 2026-06-03 --format json
-sift report --date 2026-06-03 --output report.md
+sift add @karpathy                    # 识别信息源并加入雷达（keystone）
+sift discover                         # 抓取新内容写入缓存（JSON 摘要到 stdout）
+sift query --date 2026-06-03          # 从缓存查询（默认 JSON 到 stdout）
+sift report --date 2026-06-03         # 生成报告（默认 Markdown 到 stdout，-o 写文件）
 
 # 辅助命令
-sift config validate          # 验证配置文件
-sift config show              # 打印当前激活的 Provider 和配置
-sift source list              # 列出所有可用的 Provider
-sift source info twitter      # 查看某个 Provider 的详细信息
+sift prune --provider twitter         # 按条件清理缓存
+sift config init|validate|show        # 配置管理
+sift source list|info <name>          # 查看 Provider 信息
 ```
 
+- `add`：把一个 URL / handle / subreddit / 网站识别为信息源并写入配置（keystone）
 - `discover`：遍历所有启用的 Provider，抓取新内容，写入缓存
-- `query`：从缓存中按条件查询，输出 JSON 到 stdout
-- `report`：生成 Markdown/JSON 报告文件
-- `config`：配置相关的管理命令
+- `query`：从缓存按条件查询，默认输出 JSON 到 stdout
+- `report`：生成报告，默认 Markdown 到 stdout（`-o` 写文件）
+- `prune`：按条件清理缓存
+- `config`：配置相关的管理命令（含 `init`）
 - `source`：查看 Provider 信息
 
 ---
 
 ## 6. 配置设计
 
-```yaml
-cache:
-  db_path: ./cache/sift.db
+默认配置文件 `~/.sift/config.yaml`（`sift config init` 生成），默认缓存 `~/.sift/sift.db`。
+大多数源不必手写，用 `sift add <url|@handle|r/sub|网站>` 自动识别并写入。
 
-output:
-  report_dir: ./reports
+```yaml
+cache: {}              # db_path 可省略；省略即用 ~/.sift/sift.db
 
 providers:
   - name: twitter
     enabled: true
     config:
-      accounts: [msdev, openai]
+      accounts: [msdev, OpenAI]
       nitter_instances:
         - https://nitter.net
         - https://nitter.privacydev.net
+      include_retweets: false   # 默认丢弃转推
+      include_replies: false    # 是否保留账号自己的回复
 
   - name: hackernews
     enabled: true
     config:
-      feeds: [top, new, show]
+      feeds: [top, show]
       max_items: 50
 
   - name: reddit
@@ -142,19 +138,21 @@ providers:
     enabled: true
     config:
       feeds:
-        - url: https://openai.com/blog/rss.xml
-          source: openai_blog
-        - url: https://www.anthropic.com/blog/feed.xml
-          source: anthropic_blog
-        - url: https://paperswithcode.com/feed/latest
-          source: paperswithcode
-        - url: https://www.producthunt.com/feed
-          source: producthunt
+        - url: https://openai.com/news/rss.xml
+          source: openai_news
+        - url: https://blog.google/products/gemini/rss/
+          source: gemini_blog
+        - url: https://deepmind.google/blog/rss.xml
+          source: deepmind_blog
+        # 注：Anthropic 无官方 RSS
+      max_items: 30
 ```
 
 ---
 
 ## 7. 开发路线图
+
+> 阶段 1–6 已全部完成；阶段 7 为方案演进后新增。
 
 ### 阶段 1：项目骨架 + 核心模型
 - 初始化 Go module
@@ -192,17 +190,26 @@ providers:
 - GitHub Actions 自动 release
 - README + 各平台触发示例（cron、WorkBuddy Automation、GitHub Actions）
 
+### 阶段 7：Agent 接入 + 易用性
+- `sift add` 信息源解析器：识别 + RSS 自动发现 + 验证 + 幂等写配置（keystone）
+- `~/.sift` 用户级布局 + `sift config init` 内嵌 starter；`prune` 缓存清理
+- 输出面向 Agent 友好化：`discover` 出 JSON、`report` 默认 stdout、`--quiet`
+- 全中文 CLI 帮助与文档；Homebrew tap / Scoop bucket 分发
+- 控制面 / 数据面策略见 `agent-integration.md`、`sift-add.md`
+
 ---
 
-## 8. 未来扩展预留
+## 8. 未来扩展预留：MCP（条件项）
 
-当需要支持 MCP/SKILL 时，只需要：
+只有当目标 Agent **跑不了 shell**（如 Claude Desktop、ChatGPT 桌面）时才需要 MCP；能跑
+shell 的平台用 CLI 即可。需要时：
 
 1. 新建 `internal/server/mcp.go`，实现 MCP JSON-RPC 协议
-2. 包装 `orchestrator` 的方法为 MCP tools（`discover`, `query`, `report`）
-3. `main.go` 增加 `sift serve --mcp` 命令
+2. 把 `orchestrator` / `resolver` 包成最小工具集（`add_source`、`refresh`、`query`、`report`）
+3. `main.go` 增加 `sift mcp` 命令
 
-Provider 接口、数据模型、缓存层完全不需要改动。这就是**接口设计先行**的好处。
+Provider 接口、数据模型、缓存层完全不需要改动——这就是**接口设计先行**的好处。
+取舍详见 `agent-integration.md`。
 
 ---
 
@@ -210,11 +217,12 @@ Provider 接口、数据模型、缓存层完全不需要改动。这就是**接
 
 | 平台 | 调用方式 |
 |------|----------|
-| **定时任务 (cron)** | `sift discover && sift report --date today` |
+| **定时任务 (cron)** | `sift -q discover && sift -q report --date today -o latest.md` |
 | **GitHub Actions** | 同上，在工作流文件中执行 |
-| **WorkBuddy Automation** | 执行 Shell 命令，读取 stdout 或报告文件 |
-| **ChatGPT App (Actions)** | 调用部署好的环境中的 CLI（需一个可执行环境） |
-| **Claude (CLI tool use)** | 配置允许的命令列表，直接调用 |
+| **WorkBuddy Automation** | 执行 Shell 命令，读取 stdout（JSON）或报告文件 |
+| **Agent 加源** | 用户说"关注 X" → Agent 调 `sift add <input> --write` |
+| **Claude Code / CLI tool use** | 配置允许的命令列表，直接调用 |
 | **手动使用** | 终端直接执行 |
 
-未来有了 `sift serve --mcp`，支持 MCP 的平台（如 Claude Desktop）可以免配置直接通过协议发现和调用。
+控制面（Agent 操作 sift）与数据面（Agent 消费结果）的完整策略见 `agent-integration.md`。
+只有跑不了 shell 的平台（如 Claude Desktop）才需要 §8 的 MCP。
