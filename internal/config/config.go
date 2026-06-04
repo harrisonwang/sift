@@ -145,6 +145,47 @@ func (c *Config) EnabledProviders() []ProviderConfig {
 	return out
 }
 
+// SourceCount returns the number of configured information sources. This is
+// different from len(Providers): one provider type can fan out to many concrete
+// sources, e.g. twitter.accounts or rssblog.feeds.
+func (c *Config) SourceCount(enabledOnly bool) int {
+	total := 0
+	for _, p := range c.Providers {
+		if enabledOnly && !p.Enabled {
+			continue
+		}
+		total += p.SourceCount()
+	}
+	return total
+}
+
+// SourceCount returns the number of concrete information sources configured for
+// this provider block.
+func (p ProviderConfig) SourceCount() int {
+	switch p.Name {
+	case "twitter":
+		return sequenceLen(mappingGet(&p.Config, "accounts"))
+	case "reddit":
+		return sequenceLen(mappingGet(&p.Config, "subreddits"))
+	case "rssblog":
+		return sequenceLen(mappingGet(&p.Config, "feeds"))
+	case "hackernews":
+		if n := sequenceLen(mappingGet(&p.Config, "feeds")); n > 0 {
+			return n
+		}
+		return 1 // provider default: top
+	default:
+		return 1
+	}
+}
+
+func sequenceLen(n *yaml.Node) int {
+	if n == nil || n.Kind != yaml.SequenceNode {
+		return 0
+	}
+	return len(n.Content)
+}
+
 // EnsureDirs creates the parent directory of the cache DB if it doesn't exist.
 func (c *Config) EnsureDirs() error {
 	if dir := filepath.Dir(c.Cache.DBPath); dir != "" && dir != "." {

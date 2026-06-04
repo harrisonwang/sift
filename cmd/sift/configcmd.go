@@ -62,8 +62,8 @@ func newConfigValidateCmd() *cobra.Command {
 			if len(problems) > 0 {
 				return fmt.Errorf("配置无效：\n%s", strings.Join(problems, "\n"))
 			}
-			fmt.Fprintf(os.Stdout, "配置 OK：共 %d 个 provider，%d 个已启用\n",
-				len(cfg.Providers), len(cfg.EnabledProviders()))
+			fmt.Fprintf(os.Stdout, "配置 OK：共 %d 个 provider 类型，%d 个已启用；共 %d 个信息源，%d 个已启用\n",
+				len(cfg.Providers), len(cfg.EnabledProviders()), cfg.SourceCount(false), cfg.SourceCount(true))
 			return nil
 		},
 	}

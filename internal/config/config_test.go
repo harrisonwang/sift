@@ -46,6 +46,13 @@ providers:
 		t.Fatalf("EnabledProviders: %+v", en)
 	}
 
+	if got, want := cfg.SourceCount(false), 3; got != want {
+		t.Fatalf("SourceCount(false): got %d, want %d", got, want)
+	}
+	if got, want := cfg.SourceCount(true), 2; got != want {
+		t.Fatalf("SourceCount(true): got %d, want %d", got, want)
+	}
+
 	// Per-provider Decode pulls typed settings out of the yaml.Node.
 	var s struct {
 		Feeds    []string `yaml:"feeds"`
@@ -56,6 +63,41 @@ providers:
 	}
 	if len(s.Feeds) != 2 || s.Feeds[0] != "top" || s.MaxItems != 50 {
 		t.Fatalf("decoded settings: %+v", s)
+	}
+}
+
+func TestSourceCount(t *testing.T) {
+	path := writeTemp(t, `
+providers:
+  - name: twitter
+    enabled: true
+    config:
+      accounts: [msdev, OpenAI]
+  - name: hackernews
+    enabled: true
+    config: {}
+  - name: reddit
+    enabled: false
+    config:
+      subreddits: [golang, programming]
+  - name: rssblog
+    enabled: true
+    config:
+      feeds:
+        - url: https://example.com/feed.xml
+          source: example
+        - url: https://example.org/atom.xml
+          source: example_org
+`)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := cfg.SourceCount(false), 7; got != want {
+		t.Fatalf("SourceCount(false): got %d, want %d", got, want)
+	}
+	if got, want := cfg.SourceCount(true), 5; got != want {
+		t.Fatalf("SourceCount(true): got %d, want %d", got, want)
 	}
 }
 
