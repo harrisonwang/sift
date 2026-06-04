@@ -70,7 +70,7 @@ sift config init                                  # 创建 $HOME/.sift/config.ya
 sift add @karpathy https://simonwillison.net/ --write   # 一键加源：识别+验证+写配置（推荐）
 # 或手动编辑 $HOME/.sift/config.yaml 调整 provider
 sift config validate                              # 校验配置与各 provider 设置
-sift discover                                     # 抓取新条目入缓存；打印 JSON 摘要
+sift discover                                     # 抓取今天发布的新条目入缓存；打印 JSON 摘要
 sift query --date today                           # 今天的条目，JSON 输出到 stdout
 sift report --date today                          # 今天的简报（Markdown）输出到 stdout
 sift report --date today -o digest.md             # ……或写入文件
@@ -84,7 +84,7 @@ sift report --date today -o digest.md             # ……或写入文件
 | 命令 | 用途 |
 |---|---|
 | `sift add <input>` | 识别信息源并加入雷达（`@handle` / `r/sub` / 网站 / GitHub repo）；默认 dry-run，`--write` 写配置。 |
-| `sift discover` | 抓取所有启用 provider 的新条目入缓存；向 stdout 打印 JSON 摘要。 |
+| `sift discover` | 抓取所有启用 provider 今天发布的新条目入缓存；向 stdout 打印 JSON 摘要。 |
 | `sift query` | 查询缓存并输出到 stdout（默认 JSON）。 |
 | `sift report` | 从缓存生成报告（默认 Markdown 到 stdout；`-o` 写入文件）。 |
 | `sift prune` | 按过滤条件删除缓存条目（改了 provider 过滤后用它清理旧数据）。 |

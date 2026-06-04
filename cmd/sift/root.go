@@ -30,7 +30,7 @@ func newRootCmd() *cobra.Command {
 			"所有命令的结果输出到 stdout，日志输出到 stderr。",
 		Example: "  sift config init                     # 首次使用：创建 ~/.sift/config.yaml\n" +
 			"  sift config validate                 # 校验配置与各 provider 设置\n" +
-			"  sift discover                        # 抓取新条目并写入缓存\n" +
+			"  sift discover                        # 抓取今天发布的新条目并写入缓存\n" +
 			"  sift query --date today              # 查询今天的条目（JSON）\n" +
 			"  sift report --date today -o today.md # 生成 Markdown 报告文件",
 		Version:       versionString(),

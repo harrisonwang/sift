@@ -82,7 +82,7 @@ MCP 若未来需要（仅当目标 Agent 跑不了 shell），可另起 `interna
 ```bash
 # 核心命令
 sift add @karpathy                    # 识别信息源并加入雷达（keystone）
-sift discover                         # 抓取新内容写入缓存（JSON 摘要到 stdout）
+sift discover                         # 抓取今天发布的新内容写入缓存（JSON 摘要到 stdout）
 sift query --date 2026-06-03          # 从缓存查询（默认 JSON 到 stdout）
 sift report --date 2026-06-03         # 生成报告（默认 Markdown 到 stdout，-o 写文件）
 
@@ -93,7 +93,7 @@ sift source list|info <name>          # 查看 Provider 信息
 ```
 
 - `add`：把一个 URL / handle / subreddit / 网站识别为信息源并写入配置（keystone）
-- `discover`：遍历所有启用的 Provider，抓取新内容，写入缓存
+- `discover`：遍历所有启用的 Provider，抓取今天发布的新内容，写入缓存
 - `query`：从缓存按条件查询，默认输出 JSON 到 stdout
 - `report`：生成报告，默认 Markdown 到 stdout（`-o` 写文件）
 - `prune`：按条件清理缓存

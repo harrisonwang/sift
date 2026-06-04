@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/harrisonwang/sift/internal/cache"
 	"github.com/harrisonwang/sift/internal/config"
@@ -36,15 +37,17 @@ func New(cfg *config.Config, c cache.Cache, log *slog.Logger) *Orchestrator {
 type SourceResult struct {
 	Provider string
 	Fetched  int
+	Filtered int
 	New      int
 	Err      error
 }
 
 // DiscoverStats aggregates a discover run across providers.
 type DiscoverStats struct {
-	Results      []SourceResult
-	TotalFetched int
-	TotalNew     int
+	Results       []SourceResult
+	TotalFetched  int
+	TotalFiltered int
+	TotalNew      int
 }
 
 // Discover fetches all enabled providers concurrently and stores new items.
@@ -55,6 +58,7 @@ func (o *Orchestrator) Discover(ctx context.Context) (DiscoverStats, error) {
 	if len(enabled) == 0 {
 		return DiscoverStats{}, fmt.Errorf("no enabled providers in config")
 	}
+	now := time.Now()
 
 	var (
 		mu      sync.Mutex
@@ -81,6 +85,10 @@ func (o *Orchestrator) Discover(ctx context.Context) (DiscoverStats, error) {
 			res.Fetched = len(items)
 			res.Err = ferr
 			for _, it := range items {
+				if !publishedToday(it, now) {
+					res.Filtered++
+					continue
+				}
 				isNew, ierr := o.cache.InsertIfNew(it)
 				if ierr != nil {
 					o.log.Warn("写入缓存失败", "provider", pc.Name, "err", ierr)
@@ -90,7 +98,7 @@ func (o *Orchestrator) Discover(ctx context.Context) (DiscoverStats, error) {
 					res.New++
 				}
 			}
-			o.log.Info("provider 完成", "provider", pc.Name, "fetched", res.Fetched, "new", res.New)
+			o.log.Info("provider 完成", "provider", pc.Name, "fetched", res.Fetched, "filtered", res.Filtered, "new", res.New)
 
 			mu.Lock()
 			results = append(results, res)
@@ -106,9 +114,21 @@ func (o *Orchestrator) Discover(ctx context.Context) (DiscoverStats, error) {
 	stats := DiscoverStats{Results: results}
 	for _, r := range results {
 		stats.TotalFetched += r.Fetched
+		stats.TotalFiltered += r.Filtered
 		stats.TotalNew += r.New
 	}
 	return stats, nil
+}
+
+func publishedToday(it model.Item, now time.Time) bool {
+	if it.PublishedAt.IsZero() {
+		return false
+	}
+	published := it.PublishedAt.In(now.Location())
+	now = now.In(now.Location())
+	py, pm, pd := published.Date()
+	ny, nm, nd := now.Date()
+	return py == ny && pm == nm && pd == nd
 }
 
 // Query returns cached items matching the filter.

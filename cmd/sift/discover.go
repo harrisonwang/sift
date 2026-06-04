@@ -20,21 +20,23 @@ const discoverTimeout = 5 * time.Minute
 type discoverSourceJSON struct {
 	Provider string `json:"provider"`
 	Fetched  int    `json:"fetched"`
+	Filtered int    `json:"filtered"`
 	New      int    `json:"new"`
 	OK       bool   `json:"ok"`
 	Error    string `json:"error,omitempty"`
 }
 
 type discoverResultJSON struct {
-	Fetched int                  `json:"fetched"`
-	New     int                  `json:"new"`
-	Sources []discoverSourceJSON `json:"sources"`
+	Fetched  int                  `json:"fetched"`
+	Filtered int                  `json:"filtered"`
+	New      int                  `json:"new"`
+	Sources  []discoverSourceJSON `json:"sources"`
 }
 
 func newDiscoverCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "discover",
-		Short: "抓取所有启用 provider 的新条目并写入缓存（向 stdout 输出 JSON 摘要）",
+		Short: "抓取所有启用 provider 今天发布的新条目并写入缓存（向 stdout 输出 JSON 摘要）",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return withApp(func(o *orchestrator.Orchestrator, _ *config.Config, _ *slog.Logger) error {
 				ctx, cancel := context.WithTimeout(cmd.Context(), discoverTimeout)
@@ -43,14 +45,16 @@ func newDiscoverCmd() *cobra.Command {
 				stats, discErr := o.Discover(ctx)
 
 				out := discoverResultJSON{
-					Fetched: stats.TotalFetched,
-					New:     stats.TotalNew,
-					Sources: make([]discoverSourceJSON, 0, len(stats.Results)),
+					Fetched:  stats.TotalFetched,
+					Filtered: stats.TotalFiltered,
+					New:      stats.TotalNew,
+					Sources:  make([]discoverSourceJSON, 0, len(stats.Results)),
 				}
 				for _, r := range stats.Results {
 					s := discoverSourceJSON{
 						Provider: r.Provider,
 						Fetched:  r.Fetched,
+						Filtered: r.Filtered,
 						New:      r.New,
 						OK:       r.Err == nil,
 					}
